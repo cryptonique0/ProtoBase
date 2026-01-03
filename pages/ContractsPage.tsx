@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { IdeaAnalysis, ContractModule, ContractDocItem } from '../types';
 import { CONTRACT_MODULES } from '../constants';
 
@@ -11,6 +11,13 @@ interface Props {
   onComplete: () => void;
   onGenerate: () => void;
   onBack: () => void;
+}
+
+interface LintResult {
+  id: string;
+  level: 'error' | 'warning' | 'info';
+  message: string;
+  icon: string;
 }
 
 const SOLIDITY_KEYWORDS = [
@@ -126,6 +133,7 @@ const ContractsPage: React.FC<Props> = ({
   const [tempLogic, setTempLogic] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
@@ -137,6 +145,7 @@ const ContractsPage: React.FC<Props> = ({
     setTempLogic(initialLogic);
     setHistory([initialLogic]);
     setHistoryIndex(0);
+    setShowTemplateDropdown(false);
     
     setTimeout(() => {
       textareaRef.current?.focus();
@@ -167,6 +176,7 @@ const ContractsPage: React.FC<Props> = ({
         textareaRef.current.selectionStart = textareaRef.current.selectionEnd = selectionStart + snippet.length;
       }
     }, 0);
+    setShowTemplateDropdown(false);
   };
 
   const undo = useCallback(() => {
@@ -231,7 +241,71 @@ const ContractsPage: React.FC<Props> = ({
   const lines = tempLogic.split('\n');
   const lineCount = Math.max(lines.length, 1);
 
-  // Calculate total gas for sidebar
+  // Linting Logic
+  const lintResults = useMemo(() => {
+    const results: LintResult[] = [];
+    const code = tempLogic;
+
+    if (!code.trim()) return results;
+
+    // 1. Check for missing require messages
+    const requireRegex = /require\s*\([^,)]+\)/g;
+    if (requireRegex.test(code)) {
+      results.push({
+        id: 'require-msg',
+        level: 'warning',
+        message: 'Always add a revert message to require() for better debugging.',
+        icon: 'feedback'
+      });
+    }
+
+    // 2. Check for hardcoded addresses
+    const addressRegex = /0x[a-fA-F0-9]{40}/g;
+    if (addressRegex.test(code)) {
+      results.push({
+        id: 'hardcoded-addr',
+        level: 'warning',
+        message: 'Avoid hardcoding addresses; use constructor parameters instead.',
+        icon: 'warning'
+      });
+    }
+
+    // 3. Check for missing emit for events
+    const eventLikeRegex = /(?<!emit\s+)([A-Z][a-zA-Z0-9_]*\s*\([^;]*\))/g;
+    if (eventLikeRegex.test(code.replace(/\/\/.*/g, ''))) {
+      results.push({
+        id: 'missing-emit',
+        level: 'info',
+        message: 'Potential missing "emit" keyword for an event call.',
+        icon: 'notifications'
+      });
+    }
+
+    // 4. Visibility for new functions
+    const funcNoVisibilityRegex = /function\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(?!public|private|internal|external)/g;
+    if (funcNoVisibilityRegex.test(code)) {
+      results.push({
+        id: 'visibility',
+        level: 'error',
+        message: 'Function visibility missing (public, external, internal, or private).',
+        icon: 'lock_open'
+      });
+    }
+
+    // 5. Naming convention
+    const funcNamingRegex = /function\s+[A-Z][a-zA-Z0-9_]*/g;
+    if (funcNamingRegex.test(code)) {
+      results.push({
+        id: 'naming',
+        level: 'info',
+        message: 'Use camelCase for function names instead of PascalCase.',
+        icon: 'text_format'
+      });
+    }
+
+    return results;
+  }, [tempLogic]);
+
   const totalGas = selectedModules.reduce((sum, m) => {
     const gasVal = parseInt(m.gasEstimate.replace('k', '')) || 0;
     return sum + gasVal;
@@ -558,6 +632,51 @@ const ContractsPage: React.FC<Props> = ({
               </div>
               
               <div className="flex items-center gap-4">
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-xl text-primary font-bold text-xs hover:bg-primary/20 transition-all shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-sm">auto_fix_high</span>
+                    Templates
+                    <span className="material-symbols-outlined text-sm transition-transform" style={{ transform: showTemplateDropdown ? 'rotate(180deg)' : 'none' }}>expand_more</span>
+                  </button>
+                  
+                  {showTemplateDropdown && (
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-surface-dark border border-border-dark rounded-2xl shadow-2xl py-2 z-[120] animate-fadeIn">
+                      <div className="px-4 py-2 border-b border-border-dark mb-1">
+                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Select Logic Pattern</span>
+                      </div>
+                      {[
+                        { 
+                          name: 'Standard MVP Logic', 
+                          icon: 'bolt',
+                          code: `/**\n * @dev MVP Core Business Logic\n */\nfunction _executeMvpTask(uint256 _amount) internal {\n    // 1. Guard Clauses\n    require(_amount > 0, "Amount must be positive");\n\n    // 2. Perform Onchain Operations\n    // TODO: Update specific state variables\n\n    // 3. Emit Trace Event for Frontend\n    emit MvpTaskExecuted(msg.sender, _amount, block.timestamp);\n}`
+                        },
+                        { 
+                          name: 'Safe Withdraw Pattern', 
+                          icon: 'payments',
+                          code: `/**\n * @dev Secure Ether withdrawal pattern\n */\nfunction withdraw() public onlyOwner {\n    uint256 balance = address(this).balance;\n    require(balance > 0, "No funds available");\n\n    (bool success, ) = payable(msg.sender).call{value: balance}("");\n    require(success, "Transfer failed");\n\n    emit FundsWithdrawn(msg.sender, balance);\n}`
+                        },
+                        { 
+                          name: 'Role-Gated Function', 
+                          icon: 'admin_panel_settings',
+                          code: `/**\n * @dev Logic accessible only to Moderators\n */\nfunction restrictedAction() external {\n    require(hasRole(MODERATOR_ROLE, msg.sender), "Caller is not a moderator");\n    \n    // Insert sensitive logic here\n}`
+                        }
+                      ].map((t, idx) => (
+                        <button 
+                          key={idx}
+                          onClick={() => insertAtCursor(t.code)}
+                          className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors flex items-center gap-3 group"
+                        >
+                          <span className="material-symbols-outlined text-text-secondary group-hover:text-primary transition-colors text-lg">{t.icon}</span>
+                          <span className="text-xs font-bold text-white/80 group-hover:text-white">{t.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex items-center bg-black/60 rounded-xl p-1 border border-border-dark shadow-inner">
                   <button 
                     onClick={undo}
@@ -586,7 +705,6 @@ const ContractsPage: React.FC<Props> = ({
             </div>
 
             <div className="flex-1 flex overflow-hidden bg-black/30 relative group">
-              {/* Line Numbers */}
               <div 
                 ref={lineNumbersRef}
                 className="w-14 bg-black/40 border-r border-border-dark py-6 flex flex-col items-center select-none font-mono text-[10px] text-text-secondary/30 leading-relaxed overflow-hidden"
@@ -598,7 +716,6 @@ const ContractsPage: React.FC<Props> = ({
                 ))}
               </div>
 
-              {/* Editor Surface */}
               <div className="flex-1 relative overflow-hidden bg-transparent">
                 <textarea
                   ref={textareaRef}
@@ -616,11 +733,42 @@ const ContractsPage: React.FC<Props> = ({
                 <SolidityHighlighter ref={highlighterRef} code={tempLogic} />
               </div>
 
-              {/* Tips Sidebar */}
               <div className="w-80 border-l border-border-dark bg-black/40 p-6 hidden xl:block overflow-y-auto custom-scrollbar">
                 <div className="space-y-8">
                   <section>
-                    <h4 className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-4">Snippet Library</h4>
+                    <h4 className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                       <span className="material-symbols-outlined text-sm">analytics</span>
+                       Real-time Analysis
+                    </h4>
+                    <div className="space-y-3">
+                      {lintResults.length === 0 ? (
+                        <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg text-emerald-400 text-[10px] flex items-center gap-2 italic">
+                          <span className="material-symbols-outlined text-sm">check_circle</span>
+                          Logic seems clean
+                        </div>
+                      ) : (
+                        lintResults.map(result => (
+                          <div 
+                            key={result.id} 
+                            className={`p-3 rounded-lg border flex flex-col gap-1.5 transition-all ${
+                              result.level === 'error' ? 'bg-red-500/5 border-red-500/20 text-red-400' :
+                              result.level === 'warning' ? 'bg-yellow-500/5 border-yellow-500/20 text-yellow-400' :
+                              'bg-primary/5 border-primary/20 text-primary'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 font-bold uppercase text-[8px] tracking-widest">
+                              <span className="material-symbols-outlined text-sm">{result.icon}</span>
+                              {result.level}
+                            </div>
+                            <p className="text-[10px] leading-relaxed text-white/70">{result.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </section>
+
+                  <section>
+                    <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4">Snippet Library</h4>
                     <div className="grid gap-2">
                       <button 
                         onClick={() => insertAtCursor(`require(condition, "Error message");`)}
@@ -666,12 +814,6 @@ const ContractsPage: React.FC<Props> = ({
                       ))}
                     </div>
                   </section>
-
-                  <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                    <p className="text-[10px] text-text-secondary leading-relaxed italic">
-                      "Custom logic is injected at the protocol layer. Use memory variables for temporary computations to save gas on Base."
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -685,6 +827,10 @@ const ContractsPage: React.FC<Props> = ({
                 <div className="flex items-center gap-4 opacity-60">
                   <span>Lines: {lineCount}</span>
                   <span>Chars: {tempLogic.length}</span>
+                </div>
+                <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                  <span className="material-symbols-outlined text-[14px]">bolt</span>
+                  Base Optimized
                 </div>
               </div>
 

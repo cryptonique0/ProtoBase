@@ -64,39 +64,56 @@ const LandingPage: React.FC<Props> = ({ onStart, onRoadmap }) => {
 
           <div className="relative group">
             <div className="absolute -inset-1 bg-primary rounded-3xl blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
-            <div className="relative bg-surface-dark border border-border-dark rounded-3xl overflow-hidden shadow-2xl">
-              <div className="bg-[#0a0a0a] p-4 flex items-center justify-between border-b border-border-dark">
+            <div className="relative bg-[#0a0a0a] border border-border-dark rounded-3xl overflow-hidden shadow-2xl">
+              <div className="bg-[#0a0a0a] px-6 py-4 flex items-center justify-between border-b border-border-dark/50">
                 <div className="flex gap-2">
-                  <div className="size-3 rounded-full bg-primary/20" />
-                  <div className="size-3 rounded-full bg-primary/20" />
-                  <div className="size-3 rounded-full bg-primary/20" />
+                  <div className="size-3 rounded-full bg-border-dark" />
+                  <div className="size-3 rounded-full bg-border-dark" />
+                  <div className="size-3 rounded-full bg-border-dark" />
                 </div>
-                <div className="text-[10px] font-mono text-primary px-3 py-1 rounded bg-primary/10 uppercase tracking-widest font-bold">Base Mainnet</div>
+                <div className="text-[10px] font-mono text-primary px-3 py-1 rounded bg-primary/10 uppercase tracking-widest font-bold border border-primary/20">Base Mainnet</div>
               </div>
-              <div className="p-8 space-y-6">
-                <div className="flex items-center justify-between mb-4">
-                   <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                      <span className="material-symbols-outlined text-3xl">smart_wallet</span>
+              <div className="p-8 space-y-8 relative">
+                {/* Visual Mockup Header Section */}
+                <div className="flex items-center justify-between relative z-10">
+                   <div className="flex items-center gap-3">
+                      <div className="text-3xl font-black tracking-tighter text-primary/80 flex items-center gap-2">
+                        <span className="opacity-40 -ml-8 overflow-hidden whitespace-nowrap">SMART_</span>
+                        <div className="size-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                          <span className="material-symbols-outlined text-white text-2xl">account_balance_wallet</span>
+                        </div>
+                      </div>
                    </div>
                    <div className="text-right">
-                      <div className="text-xs font-bold text-white uppercase tracking-widest">Paymaster Active</div>
-                      <div className="text-[10px] text-emerald-400 font-mono">0.00 Gas Expense</div>
+                      <div className="text-[10px] font-bold text-white uppercase tracking-widest opacity-80">Paymaster Active</div>
+                      <div className="text-sm text-emerald-400 font-mono font-bold">0.00 Gas Expense</div>
                    </div>
                 </div>
-                <div className="h-40 bg-black/40 rounded-xl border border-white/5 p-6 flex flex-col justify-center gap-4">
-                   <div className="h-2 w-3/4 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-2/3 animate-shimmer" />
-                   </div>
-                   <div className="h-2 w-1/2 bg-white/10 rounded-full" />
-                   <div className="mt-4 flex gap-4">
-                      <div className="size-8 rounded-lg bg-[#855DCD]/20 flex items-center justify-center text-[#855DCD]">
-                         <span className="material-symbols-outlined text-sm">chat</span>
+
+                {/* Progress Visualizer */}
+                <div className="bg-black/60 rounded-2xl border border-white/5 p-8 flex flex-col gap-6 shadow-inner relative overflow-hidden">
+                   <div className="space-y-4">
+                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                         <div className="h-full bg-primary w-3/4 animate-shimmer" />
                       </div>
-                      <div className="flex-1 h-8 rounded-lg bg-primary text-white text-[10px] font-bold flex items-center justify-center uppercase tracking-widest">
+                      <div className="h-2 w-2/3 bg-white/5 rounded-full" />
+                   </div>
+                   
+                   <div className="flex gap-4 mt-2">
+                      <div className="size-10 rounded-xl bg-[#855DCD]/10 border border-[#855DCD]/20 flex items-center justify-center text-[#855DCD]">
+                         <span className="material-symbols-outlined text-xl">forum</span>
+                      </div>
+                      <button 
+                        onClick={onStart}
+                        className="flex-1 h-10 rounded-xl bg-primary hover:bg-primary-hover text-white text-[11px] font-bold flex items-center justify-center uppercase tracking-widest transition-all shadow-lg shadow-primary/20 active:scale-95"
+                      >
                         Deploy to Mainnet
-                      </div>
+                      </button>
                    </div>
                 </div>
+
+                {/* Background Decoration */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-64 bg-primary/5 blur-3xl rounded-full -z-0 pointer-events-none" />
               </div>
             </div>
           </div>
