@@ -4,7 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProtoBase - Idea to Onchain MVP</title>
+  <title>ProtoBase - Build on Base Mainnet</title>
+  
+  <!-- Farcaster Frame Metadata -->
+  <meta property="fc:frame" content="vNext" />
+  <meta property="fc:frame:image" content="https://proto-base.vercel.app/og-image.png" />
+  <meta property="fc:frame:button:1" content="Launch MVP" />
+  <meta property="fc:frame:button:2" content="View Leaderboard" />
+  
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,12 +23,12 @@
       theme: {
         extend: {
           colors: {
-            primary: '#135bec',
-            'primary-hover': '#0f4bc4',
-            'background-dark': '#0a0c10',
-            'surface-dark': '#111318',
-            'border-dark': '#282e39',
-            'text-secondary': '#9da6b9',
+            primary: '#0052FF', // Official Base Blue
+            'primary-hover': '#003eb3',
+            'background-dark': '#000000',
+            'surface-dark': '#0a0a0a',
+            'border-dark': '#1a1a1a',
+            'text-secondary': '#888888',
           },
           fontFamily: {
             display: ['Space Grotesk', 'sans-serif'],
@@ -33,7 +40,7 @@
   </script>
   <style>
     body {
-      background-color: #0a0c10;
+      background-color: #000000;
       color: #ffffff;
       font-family: 'Space Grotesk', sans-serif;
     }

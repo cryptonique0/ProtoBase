@@ -5,7 +5,9 @@ export enum ProjectStep {
   CONTRACTS = 'CONTRACTS',
   FRONTEND = 'FRONTEND',
   DEPLOYMENT = 'DEPLOYMENT',
-  MONITOR = 'MONITOR'
+  MONITOR = 'MONITOR',
+  ROADMAP = 'ROADMAP',
+  DOCS = 'DOCS'
 }
 
 export interface IdeaAnalysis {
@@ -16,6 +18,17 @@ export interface IdeaAnalysis {
   suggestedStack: string[];
 }
 
+export interface ContractDocItem {
+  name: string;
+  description: string;
+  params?: { name: string; type: string; description: string }[];
+}
+
+export interface ContractDocumentation {
+  functions: ContractDocItem[];
+  events: ContractDocItem[];
+}
+
 export interface ContractModule {
   id: string;
   name: string;
@@ -23,6 +36,7 @@ export interface ContractModule {
   category: 'Security' | 'DeFi' | 'NFT' | 'Governance' | 'Utility';
   gasEstimate: string;
   status: 'Audited' | 'Beta' | 'Experimental';
+  documentation: ContractDocumentation;
 }
 
 export interface UITemplate {
