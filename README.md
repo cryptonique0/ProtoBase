@@ -46,6 +46,7 @@ Located in: `src/modules/profiles/`
 - Project ownership and portfolio
 - Social links (Warpcast, Twitter, GitHub)
 - Empty state for first-time builders
+- Leaderboard boosters: deployment streaks + XP multipliers for fast shippers
 
 **Types:**
 ```typescript

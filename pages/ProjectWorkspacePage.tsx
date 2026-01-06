@@ -1,9 +1,40 @@
+
 import React, { useState } from 'react';
 import { useProjectsStore } from '../src/store';
 import { ProjectWorkspace, ProjectStatus } from '../types';
 import { contractTemplates } from '../src/templates/contracts';
 import { frontendTemplates } from '../src/templates/frontend';
 import { deployToBaseSepolia } from '../src/services/deploymentService';
+import { useEffect as useEffectCoverage, useState as useStateCoverage } from 'react';
+import { getCoveragePercent } from '../src/lib/coverageUtils';
+
+// Automated Test Coverage Badge
+function CoverageBadge() {
+  const [coverage, setCoverage] = useStateCoverage<number | null>(null);
+  const { xpPoints, showToast } = useProjectsStore();
+  useEffectCoverage(() => {
+    // Dynamically import to avoid SSR issues
+    (async () => {
+      try {
+        const pct = getCoveragePercent();
+        setCoverage(pct);
+        if (pct && pct >= 80 && xpPoints < 1000) {
+          useProjectsStore.setState((state) => ({ xpPoints: state.xpPoints + 250 }));
+          if (showToast) showToast('Great test coverage! +250 XP', 'success');
+        }
+      } catch {}
+    })();
+  }, []);
+  if (coverage === null) return <span className="inline-block bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs">Coverage: N/A</span>;
+  let color = 'bg-red-200 text-red-800';
+  if (coverage >= 80) color = 'bg-green-200 text-green-800';
+  else if (coverage >= 50) color = 'bg-yellow-200 text-yellow-800';
+  return (
+    <span className={`inline-block ${color} px-3 py-1 rounded-full text-xs`}>
+      Test Coverage: {coverage}%
+    </span>
+  );
+}
 
 export function ProjectWorkspacePage() {
   const { workspaces, activeWorkspaceId, setActiveWorkspace, updateWorkspace, updateStatus } = useProjectsStore();
@@ -28,7 +59,11 @@ export function ProjectWorkspacePage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold">{activeWorkspace.name}</h1>
-          <StatusBadge status={activeWorkspace.status} />
+          <div className="flex items-center gap-3">
+            <StreakBadge />
+            <XPBadge />
+            <StatusBadge status={activeWorkspace.status} />
+          </div>
         </div>
         <ProjectStatusFlow currentStatus={activeWorkspace.status} />
       </div>
@@ -76,6 +111,25 @@ function StatusBadge({ status }: { status: ProjectStatus }) {
   return (
     <span className={`px-4 py-2 rounded-full text-sm font-medium ${config.color}`}>
       {config.label}
+    </span>
+  );
+}
+
+function StreakBadge() {
+  const { streakCount } = useProjectsStore();
+  if (streakCount <= 0) return null;
+  return (
+    <span className="px-3 py-2 rounded-full text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200">
+      🔥 Streak: {streakCount}x
+    </span>
+  );
+}
+
+function XPBadge() {
+  const { xpPoints } = useProjectsStore();
+  return (
+    <span className="px-3 py-2 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+      ⚡ XP: {xpPoints}
     </span>
   );
 }
@@ -148,6 +202,79 @@ function OverviewTab({ workspace }: { workspace: ProjectWorkspace }) {
             <p className="font-medium">{workspace.frontendTemplateId || 'Not selected'}</p>
           </div>
         </div>
+        {/* Social Sharing & Referral System */}
+        <div className="mt-6 flex gap-4">
+          <ShareButton workspace={workspace} />
+        </div>
+        {/* Automated Test Coverage Badge */}
+        <div className="mt-4">
+          <CoverageBadge />
+        </div>
+
+// Automated Test Coverage Badge
+        {/* Project Milestone Achievements */}
+        <div className="mt-2 flex gap-2">
+          <MilestoneBadges milestones={workspace.milestones || []} />
+        </div>
+        // Milestone Badges UI
+        import type { ProjectMilestone, MilestoneKey } from '../types';
+        function MilestoneBadges({ milestones }: { milestones: ProjectMilestone[] }) {
+          const all: { key: MilestoneKey; label: string; icon: string }[] = [
+            { key: 'first_deploy', label: 'First Deploy', icon: '🏅' },
+            { key: 'ten_deploys', label: '10 Deployments', icon: '🏆' },
+            { key: 'first_frontend_live', label: 'First Frontend Live', icon: '🚀' },
+          ];
+          return (
+            <>
+              {all.map((m) => {
+                const achieved = milestones.find((ms) => ms.key === m.key && ms.achieved);
+                return (
+                  <span
+                    key={m.key}
+                    className={`inline-block px-2 py-1 rounded text-xs mr-1 ${achieved ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`}
+                    title={m.label}
+                  >
+                    {m.icon} {m.label}
+                    {achieved && achieved.achievedAt ? ` (${new Date(achieved.achievedAt).toLocaleDateString()})` : ''}
+                  </span>
+                );
+              })}
+            </>
+          );
+        }
+        {/* Real-Time Activity Feed */}
+        <div className="mt-4">
+          <ActivityFeed />
+        </div>
+        // Real-Time Activity Feed Component
+        function ActivityFeed() {
+          const { activityLog } = useProjectsStore();
+          if (!activityLog.length) {
+            return <div className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-800">No recent activity yet.</div>;
+          }
+          return (
+            <div className="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-800 max-h-48 overflow-y-auto">
+              <div className="font-semibold mb-1 text-blue-900">Activity Feed</div>
+              <ul className="space-y-1">
+                {activityLog.slice(0, 10).map((log, idx) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <span className={`font-bold ${log.level === 'success' ? 'text-green-700' : log.level === 'error' ? 'text-red-700' : log.level === 'warn' ? 'text-yellow-700' : 'text-blue-700'}`}>{log.level.toUpperCase()}</span>
+                    <span>{log.message}</span>
+                    <span className="ml-auto text-gray-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+        {/* Onboarding/Guided Tour (stub) */}
+        <div className="mt-4">
+          <button className="bg-purple-100 text-purple-800 px-3 py-1 rounded text-xs">Start Guided Tour (stub)</button>
+        </div>
+        {/* Feedback/Rating System (stub) */}
+        <div className="mt-4">
+          <span className="inline-block bg-pink-100 text-pink-800 px-2 py-1 rounded text-xs">⭐ 4.8/5 (stub)</span>
+        </div>
       </div>
 
       {workspace.testnetAddress && (
@@ -172,6 +299,64 @@ function OverviewTab({ workspace }: { workspace: ProjectWorkspace }) {
       >
         Advance to Next Stage
       </button>
+      {/* Mainnet Deploy Toggle (stub) */}
+      <div className="mt-4">
+        <label className="inline-flex items-center">
+          <input type="checkbox" className="form-checkbox" disabled />
+          <span className="ml-2 text-sm text-gray-600">Deploy to Base Mainnet (stub)</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+// Social Sharing & Referral System Button
+import { useUserStore } from '../src/store';
+import { v4 as uuidv4 } from 'uuid';
+
+function ShareButton({ workspace }: { workspace: ProjectWorkspace }) {
+  const { userId } = useUserStore();
+  const { shareProject, getReferralStats, updateWorkspace, showToast } = useProjectsStore();
+  // Ensure workspace has a referral code
+  React.useEffect(() => {
+    if (!workspace.referralCode) {
+      updateWorkspace(workspace.id, { referralCode: uuidv4() });
+    }
+  }, [workspace.referralCode, workspace.id, updateWorkspace]);
+
+  const referralCode = workspace.referralCode || '';
+  const referralUrl = `${window.location.origin}/?ref=${referralCode}`;
+  const shareText = encodeURIComponent(`🚀 Check out my Base project "${workspace.name}"! #BaseBuilders #web3\n${referralUrl}`);
+
+  const handleShare = (platform: 'twitter' | 'farcaster' | 'lens') => {
+    let url = '';
+    if (platform === 'twitter') {
+      url = `https://twitter.com/intent/tweet?text=${shareText}`;
+    } else if (platform === 'farcaster') {
+      url = `https://warpcast.com/~/compose?text=${shareText}`;
+    } else if (platform === 'lens') {
+      url = `https://hey.xyz/?text=${shareText}`;
+    }
+    window.open(url, '_blank');
+    shareProject(workspace.id, platform);
+    if (showToast) showToast('Thanks for sharing! +100 XP', 'success');
+  };
+
+  const stats = getReferralStats(workspace.id);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2">
+        <button onClick={() => handleShare('twitter')} className="bg-blue-500 text-white px-3 py-2 rounded text-xs hover:bg-blue-600">Share on X</button>
+        <button onClick={() => handleShare('farcaster')} className="bg-violet-500 text-white px-3 py-2 rounded text-xs hover:bg-violet-600">Share on Farcaster</button>
+        <button onClick={() => handleShare('lens')} className="bg-green-500 text-white px-3 py-2 rounded text-xs hover:bg-green-600">Share on Lens</button>
+      </div>
+      <div className="text-xs text-gray-600 mt-1">
+        Referral link: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{referralUrl}</span>
+      </div>
+      <div className="text-xs text-gray-700 mt-1">
+        Shares: {stats.totalShares} | Referrals: {stats.totalReferrals} | XP earned: {stats.earnedXp}
+      </div>
     </div>
   );
 }
@@ -250,6 +435,10 @@ function FrontendTab({ workspace }: { workspace: ProjectWorkspace }) {
         frontendTemplateId: templateId,
         frontendFiles: template.code,
       });
+      // Milestone: First Frontend Live
+      if (!(workspace.milestones || []).some((m) => m.key === 'first_frontend_live' && m.achieved)) {
+        useProjectsStore.getState().achieveMilestone(workspace.id, 'first_frontend_live');
+      }
     }
   };
 
@@ -307,6 +496,7 @@ function FrontendTab({ workspace }: { workspace: ProjectWorkspace }) {
 
 function DeployTab({ workspace }: { workspace: ProjectWorkspace }) {
   const { updateWorkspace, updateStatus } = useProjectsStore();
+  const { registerDeployment } = useProjectsStore.getState();
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentError, setDeploymentError] = useState<string | null>(null);
 
@@ -332,6 +522,16 @@ function DeployTab({ workspace }: { workspace: ProjectWorkspace }) {
           deployedAt: new Date().toISOString(),
         });
         updateStatus(workspace.id, ProjectStatus.MVP_DEPLOYED);
+        registerDeployment();
+        // Milestone: First Deploy
+        if (!(workspace.milestones || []).some((m) => m.key === 'first_deploy' && m.achieved)) {
+          useProjectsStore.getState().achieveMilestone(workspace.id, 'first_deploy');
+        }
+        // Milestone: 10 Deployments
+        const deployMilestones = (workspace.milestones || []).filter((m) => m.key === 'first_deploy' && m.achieved).length;
+        if (deployMilestones + 1 === 10) {
+          useProjectsStore.getState().achieveMilestone(workspace.id, 'ten_deploys');
+        }
       } else {
         setDeploymentError(result.error || 'Deployment failed');
       }

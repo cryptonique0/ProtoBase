@@ -77,6 +77,15 @@ export interface FrontendTemplate {
   preview?: string;
 }
 
+export type MilestoneKey = 'first_deploy' | 'ten_deploys' | 'first_frontend_live';
+
+export interface ProjectMilestone {
+  key: MilestoneKey;
+  label: string;
+  achieved: boolean;
+  achievedAt?: string;
+}
+
 export interface ProjectWorkspace {
   id: string;
   ideaId: string;
@@ -101,6 +110,23 @@ export interface ProjectWorkspace {
   createdAt: string;
   updatedAt: string;
   deployedAt?: string;
+
+  // Social Sharing & Referral
+  referralCode?: string;
+  shares?: { platform: string; date: string }[];
+  referredBy?: string; // referralCode of referrer
+  referrals?: string[]; // userIds of referred users
+  shareXpClaimed?: boolean;
+  referralXpClaimed?: boolean;
+
+  // Milestones
+  milestones?: ProjectMilestone[];
+}
+
+export interface ReferralStats {
+  totalShares: number;
+  totalReferrals: number;
+  earnedXp: number;
 }
 
 export interface DeploymentLog {
